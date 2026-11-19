@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ウマ娘 コンディション検索表</title>
+<style>
+  body {
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    margin: 0;
+    padding: 20px;
+  }
+  .container {
+    display: flex;
+    gap: 30px;
+    max-width: 1150px;
+    margin: 0 auto;
+    align-items: flex-start;
+  }
+  .search-area, .list-area {
+    flex: 1;
+    width: 100%;
+  }
+  .search-area {
+    position: sticky;
+    top: 20px;
+  }
+  @media (max-width: 768px) {
+    .container {
+      flex-direction: column;
+    }
+    .search-area {
+      position: static;
+    }
+  }
+  h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 18px;
+    color: #fff;
+  }
+  .search-wrapper {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .search-box {
+    flex: 1;
+    padding: 12px 14px;
+    font-size: 16px;
+    background-color: #222;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 6px;
+    box-sizing: border-box;
+    outline: none;
+  }
+  .search-box:focus {
+    border-color: #4da6ff;
+  }
+  .clear-btn {
+    padding: 0 16px;
+    background-color: #333;
+    color: #ccc;
+    border: 1px solid #555;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .clear-btn:hover {
+    background-color: #444;
+    color: #fff;
+  }
+  .count-info {
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 10px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #1a1a1a;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid #333;
+    padding: 9px 12px;
+    text-align: left;
+  }
+  th {
+    background-color: #2a2a2a;
+    color: #fff;
+    font-weight: bold;
+  }
+  tr:hover {
+    background-color: #262626;
+  }
+  .empty-msg {
+    color: #777;
+    text-align: center;
+    padding: 20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 左側：検索エリア -->
+  <div class="search-area">
+    <h3>🔍 検索</h3>
+    <div class="search-wrapper">
+      <input type="text" id="searchInput" class="search-box" placeholder="名前やコンディションを入力（例：タキオン、切れ者）">
+      <button id="clearBtn" class="clear-btn">クリア</button>
+    </div>
+    <div id="resultCount" class="count-info">文字を入力すると検索結果が表示されます</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 55%;">名前</th>
+          <th style="width: 45%;">コンディション</th>
+        </tr>
+      </thead>
+      <tbody id="searchResult">
+        <tr><td colspan="2" class="empty-msg">検索キーワードを入力してください</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 右側：全データ一覧 -->
+  <div class="list-area">
+    <h3 id="allTitle">📋 全一覧</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 55%;">名前</th>
+          <th style="width: 45%;">コンディション</th>
+        </tr>
+      </thead>
+      <tbody id="allData"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const characterData = [
+    { name: "アーモンドアイ", condition: "切れ者" },
+    { name: "アイネスフウジン 通常", condition: "注目株" },
+    { name: "アイネスフウジン バレンタイン", condition: "切れ者" },
+    { name: "アイネスフウジン 無人島", condition: "ポジティブ思考" },
+    { name: "アグネスタキオン 通常", condition: "切れ者" },
+    { name: "アグネスタキオン 水着", condition: "練習上手" },
+    { name: "アグネスタキオン モノクル", condition: "注目株" },
+    { name: "アグネスデジタル 通常", condition: "注目株" },
+    { name: "アグネスデジタル キョンシー", condition: "愛嬌" },
+    { name: "アストンマーチャン 通常", condition: "愛嬌" },
+    { name: "アストンマーチャン 嫁", condition: "切れ者" },
+    { name: "アドマイヤグルーヴ", condition: "切れ者" },
+    { name: "アドマイヤベガ　通常", condition: "愛嬌" },
+    { name: "アドマイヤベガ　クリスマス", condition: "切れ者" },
+    { name: "イクノディクタス　通常", condition: "練習上手" },
+    { name: "イクノディクタス　正月", condition: "リフレッシュの心得" },
+    { name: "イナリワン　通常", condition: "注目株" },
+    { name: "イナリワン　和服", condition: "練習上手" },
+    { name: "ヴィクトワールピサ", condition: "切れ者、幸運体質" },
+    { name: "ウイニングチケット　通常", condition: "注目株" },
+    { name: "ウイニングチケット　スチームパンク", condition: "愛嬌" },
+    { name: "ウイニングチケット　UAF", condition: "愛嬌" },
+    { name: "ヴィブロス　通常", condition: "愛嬌、注目株" },
+    { name: "ヴィブロス　水着", condition: "愛嬌、幸運体質" },
+    { name: "ヴィルシーナ", condition: "注目株" },
+    { name: "ウインバリアシオン", condition: "ポジティブ思考" },
+    { name: "ウオッカ　通常", condition: "練習上手" },
+    { name: "ウオッカ　クリスマス", condition: "注目株" },
+    { name: "エアグルーヴ　通常", condition: "注目株" },
+    { name: "エアグルーヴ　嫁", condition: "愛嬌" },
+    { name: "エアグルーヴ　ハロウィン", condition: "注目株" },
+    { name: "エアシャカール　通常", condition: "愛嬌" },
+    { name: "エアシャカール　ハロウィン", condition: "注目株" },
+    { name: "エアメサイア", condition: "注目株" },
+    { name: "エイシンフラッシュ　通常", condition: "切れ者" },
+    { name: "エイシンフラッシュ　バレンタイン", condition: "愛嬌" },
+    { name: "エイシンフラッシュ　水着", condition: "愛嬌" },
+    { name: "エスポワールシチー", condition: "切れ者" },
+    { name: "エピファネイア", condition: "切れ者" },
+    { name: "エルコンドルパサー　通常", condition: "切れ者" },
+    { name: "エルコンドルパサー　モンク", condition: "愛嬌" },
+    { name: "オグリキャップ　通常", condition: "注目株" },
+    { name: "オグリキャップ　クリスマス", condition: "愛嬌" },
+    { name: "オグリキャップ　シングレ", condition: "切れ者" },
+    { name: "オルフェーブル", condition: "切れ者、注目株" },
+    { name: "カツラギエース　通常", condition: "愛嬌" },
+    { name: "カツラギエース　正月", condition: "切れ者" },
+    { name: "カルストンライトオ", condition: "愛嬌" },
+    { name: "カレンチャン　通常", condition: "愛嬌、練習上手" },
+    { name: "カレンチャン　嫁", condition: "切れ者、愛嬌" },
+    { name: "カレンブーケドール", condition: "愛嬌" },
+    { name: "カワカミプリンセス　通常", condition: "練習上手" },
+    { name: "カワカミプリンセス　和服", condition: "注目株" },
+    { name: "キセキ", condition: "注目株" },
+    { name: "キタサンブラック　通常", condition: "愛嬌" },
+    { name: "キタサンブラック　正月", condition: "切れ者" },
+    { name: "キタサンブラック　アニメ", condition: "切れ者" },
+    { name: "キングヘイロー　通常", condition: "練習上手" },
+    { name: "キングヘイロー　嫁", condition: "愛嬌" },
+    { name: "キングヘイロー　団長", condition: "練習上手" },
+    { name: "グラスワンダー　通常", condition: "切れ者" },
+    { name: "グラスワンダー　ヒーラー", condition: "注目株" },
+    { name: "グラスワンダー　和服", condition: "幸運体質" },
+    { name: "グランアレグリア", condition: "切れ者" },
+    { name: "クロノジェネシス", condition: "切れ者" },
+    { name: "ケイエスミラクル　通常", condition: "愛嬌" },
+    { name: "ケイエスミラクル　秋", condition: "注目株" },
+    { name: "ゴールドシチー　通常", condition: "愛嬌" },
+    { name: "ゴールドシチー　和服", condition: "注目株" },
+    { name: "ゴールドシチー　水着", condition: "ポジティブ思考" },
+    { name: "ゴールドシップ　通常", condition: "切れ者、愛嬌" },
+    { name: "ゴールドシップ　水着", condition: "愛嬌、練習上手" },
+    { name: "ゴールドシップ　凱旋門", condition: "切れ者、注目株" },
+    { name: "コパノリッキー　通常", condition: "愛嬌" },
+    { name: "コパノリッキー　マーチ", condition: "幸運体質" },
+    { name: "サイレンススズカ　通常", condition: "注目株" },
+    { name: "サイレンススズカ　水着", condition: "愛嬌" },
+    { name: "サウンズオブアース　通常", condition: "切れ者、愛嬌" },
+    { name: "サウンズオブアース　バレンタイン", condition: "切れ者、注目株" },
+    { name: "サクラチヨノオー　通常", condition: "練習上手" },
+    { name: "サクラチヨノオー　ダンス", condition: "愛嬌" },
+    { name: "サクラバクシンオー　通常", condition: "愛嬌、注目株" },
+    { name: "サクラバクシンオー　チア", condition: "切れ者、愛嬌" },
+    { name: "サクラバクシンオー　ダンス", condition: "切れ者、愛嬌" },
+    { name: "サクラローレル　通常", condition: "愛嬌" },
+    { name: "サクラローレル　正月", condition: "ポジティブ思考" },
+    { name: "サトノクラウン　通常", condition: "注目株" },
+    { name: "サトノクラウン　水着", condition: "注目株" },
+    { name: "サトノダイヤモンド　通常", condition: "注目株" },
+    { name: "サトノダイヤモンド　正月", condition: "愛嬌" },
+    { name: "サトノダイヤモンド　凱旋門", condition: "切れ者" },
+    { name: "シーキングザパール　通常", condition: "愛嬌" },
+    { name: "シーキングザパール　ハロウィン", condition: "切れ者" },
+    { name: "シーザリオ　通常", condition: "愛嬌" },
+    { name: "シーザリオ　嫁", condition: "幸運体質" },
+    { name: "ジェンティルドンナ　通常", condition: "切れ者、練習上手" },
+    { name: "ジェンティルドンナ　嫁", condition: "切れ者、リフレッシュの心得" },
+    { name: "ジャングルポケット　通常", condition: "切れ者" },
+    { name: "ジャングルポケット　応援", condition: "愛嬌" },
+    { name: "シュヴァルグラン　通常", condition: "愛嬌" },
+    { name: "シュヴァルグラン　水着", condition: "切れ者" },
+    { name: "シリウスシンボリ　通常", condition: "切れ者" },
+    { name: "シリウスシンボリ　レジェンズ", condition: "練習上手" },
+    { name: "シンコウウインディ　通常", condition: "切れ者" },
+    { name: "シンコウウインディ　秋", condition: "愛嬌" },
+    { name: "シンボリクリスエス　通常", condition: "練習上手" },
+    { name: "シンボリクリスエス　ハロウィン", condition: "注目株" },
+    { name: "シンボリルドルフ　通常", condition: "注目株" },
+    { name: "シンボリルドルフ　秋", condition: "切れ者" },
+    { name: "シンボリルドルフ　ハロウィン", condition: "切れ者" },
+    { name: "スイープトウショウ　通常", condition: "切れ者" },
+    { name: "スイープトウショウ　嫁", condition: "愛嬌" },
+    { name: "スーパークリーク　通常", condition: "注目株" },
+    { name: "スーパークリーク　ハロウィン", condition: "愛嬌" },
+    { name: "スーパークリーク　忍者", condition: "愛嬌" },
+    { name: "ステイゴールド", condition: "ポジティブ思考" },
+    { name: "スティルインラブ", condition: "切れ者、愛嬌" },
+    { name: "スペシャルウィーク　通常", condition: "注目株" },
+    { name: "スペシャルウィーク　水着", condition: "練習上手" },
+    { name: "スペシャルウィーク　配布", condition: "切れ者" },
+    { name: "スマートファルコン　通常", condition: "愛嬌" },
+    { name: "スマートファルコン　黄色", condition: "注目株" },
+    { name: "スマートファルコン　マーチ", condition: "切れ者" },
+    { name: "セイウンスカイ　通常", condition: "愛嬌" },
+    { name: "セイウンスカイ　ダンス", condition: "切れ者" },
+    { name: "セイウンスカイ　水着", condition: "切れ者" },
+    { name: "ゼンノロブロイ　通常", condition: "切れ者、練習上手" },
+    { name: "ゼンノロブロイ　秋", condition: "切れ者、注目株" },
+    { name: "ダイイチルビー　通常", condition: "練習上手" },
+    { name: "ダイイチルビー　青", condition: "切れ者" },
+    { name: "タイキシャトル　通常", condition: "切れ者" },
+    { name: "タイキシャトル　夏", condition: "愛嬌" },
+    { name: "タイキシャトル　バレンタイン", condition: "切れ者" },
+    { name: "ダイタクヘリオス　通常", condition: "切れ者" },
+    { name: "ダイタクヘリオス　赤", condition: "愛嬌" },
+    { name: "ダイワスカーレット　通常", condition: "注目株" },
+    { name: "ダイワスカーレット　クリスマス", condition: "愛嬌" },
+    { name: "ダイワスカーレット　駿大祭", condition: "切れ者" },
+    { name: "タップダンスシチー　通常", condition: "愛嬌" },
+    { name: "タップダンスシチー　ダンス", condition: "愛嬌" },
+    { name: "タニノギムレット　通常", condition: "練習上手" },
+    { name: "タニノギムレット　ダンス", condition: "愛嬌" },
+    { name: "タマモクロス　通常", condition: "切れ者、愛嬌" },
+    { name: "タマモクロス　秋", condition: "切れ者、注目株" },
+    { name: "ダンツフレーム", condition: "愛嬌" },
+    { name: "ツインターボ", condition: "練習上手" },
+    { name: "ツルマルツヨシ", condition: "愛嬌" },
+    { name: "デアリングタクト", condition: "切れ者" },
+    { name: "デアリングハート", condition: "ポジティブ思考" },
+    { name: "テイエムオペラオー　通常", condition: "切れ者" },
+    { name: "テイエムオペラオー　正月", condition: "愛嬌" },
+    { name: "デュランダル", condition: "切れ者、幸運体質" },
+    { name: "トウカイテイオー　通常", condition: "注目株" },
+    { name: "トウカイテイオー　アニメ", condition: "練習上手" },
+    { name: "トウカイテイオー　秋", condition: "愛嬌" },
+    { name: "ドゥラメンテ　通常", condition: "切れ者" },
+    { name: "ドゥラメンテ　ハロウィン", condition: "幸運体質" },
+    { name: "トーセンジョーダン　通常", condition: "愛嬌" },
+    { name: "トーセンジョーダン　水着", condition: "練習上手" },
+    { name: "トーセンジョーダン　ハロウィン", condition: "愛嬌" },
+    { name: "トランセンド　通常", condition: "愛嬌" },
+    { name: "トランセンド　温泉", condition: "切れ者" },
+    { name: "ドリームジャーニー　通常", condition: "注目株" },
+    { name: "ドリームジャーニー　クリスマス", condition: "幸運体質" },
+    { name: "ナイスネイチャ　通常", condition: "愛嬌" },
+    { name: "ナイスネイチャ　チア", condition: "練習上手" },
+    { name: "ナイスネイチャ　和服", condition: "注目株" },
+    { name: "ナカヤマフェスタ　通常", condition: "切れ者" },
+    { name: "ナカヤマフェスタ　クリスマス", condition: "注目株" },
+    { name: "ナリタタイシン　通常", condition: "愛嬌" },
+    { name: "ナリタタイシン　スチームパンク", condition: "注目株" },
+    { name: "ナリタタイシン　メカ", condition: "愛嬌" },
+    { name: "ナリタトップロード　通常", condition: "練習上手" },
+    { name: "ナリタトップロード　クリスマス", condition: "ポジティブ思考" },
+    { name: "ナリタトップロード　ラーメン", condition: "切れ者" },
+    { name: "ナリタブライアン　通常", condition: "注目株" },
+    { name: "ナリタブライアン　餓狼", condition: "切れ者" },
+    { name: "ニシノフラワー　通常", condition: "愛嬌" },
+    { name: "ニシノフラワー　嫁", condition: "注目株" },
+    { name: "ネオユニヴァース　通常", condition: "愛嬌" },
+    { name: "ネオユニヴァース　眼鏡", condition: "注目株" },
+    { name: "ノースフライト　通常", condition: "愛嬌" },
+    { name: "ノースフライト　ダンス", condition: "リフレッシュの心得" },
+    { name: "ノーリーズン", condition: "注目株" },
+    { name: "バブルガムフェロー　通常", condition: "リフレッシュの心得" },
+    { name: "バブルガムフェロー　正月", condition: "愛嬌、ポジティブ思考" },
+    { name: "ハルウララ　通常", condition: "切れ者、注目株" },
+    { name: "ハルウララ　正月", condition: "愛嬌、練習上手" },
+    { name: "バンブーメモリー　通常", condition: "練習上手" },
+    { name: "バンブーメモリー　夏", condition: "愛嬌" },
+    { name: "ビコーペガサス", condition: "注目株" },
+    { name: "ヒシアケボノ　通常", condition: "切れ者" },
+    { name: "ヒシアケボノ　ハロウィン", condition: "ポジティブ思考" },
+    { name: "ヒシアマゾン　通常", condition: "練習上手" },
+    { name: "ヒシアマゾン　嫁", condition: "切れ者" },
+    { name: "ヒシミラクル　通常", condition: "切れ者、練習上手" },
+    { name: "ヒシミラクル　秋", condition: "切れ者、愛嬌" },
+    { name: "ビリーブ", condition: "ポジティブ思考、練習上手" },
+    { name: "ビワハヤヒデ　通常", condition: "練習上手" },
+    { name: "ビワハヤヒデ　クリスマス", condition: "切れ者" },
+    { name: "ビワハヤヒデ　メカ", condition: "切れ者" },
+    { name: "ファインモーション　通常", condition: "注目株" },
+    { name: "ファインモーション　嫁", condition: "切れ者" },
+    { name: "ファインモーション　ラーメン", condition: "愛嬌" },
+    { name: "ファレノプシス", condition: "ポジティブ思考" },
+    { name: "ブエナビスタ", condition: "切れ者、愛嬌" },
+    { name: "フェノーメノ　通常", condition: "ポジティブ思考" },
+    { name: "フェノーメノ　秋", condition: "リフレッシュの心得" },
+    { name: "フサイチパンドラ　通常", condition: "愛嬌、注目株" },
+    { name: "フサイチパンドラ　水着", condition: "ポジティブ思考" },
+    { name: "フジキセキ　通常", condition: "練習上手" },
+    { name: "フジキセキ　ダンス", condition: "愛嬌" },
+    { name: "フジキセキ　応援", condition: "幸運体質" },
+    { name: "フリオーソ", condition: "愛嬌" },
+    { name: "ホッコータルマエ　通常", condition: "愛嬌" },
+    { name: "ホッコータルマエ　水着", condition: "切れ者" },
+    { name: "マーベラスサンデー　通常", condition: "練習上手" },
+    { name: "マーベラスサンデー　ハロウィン", condition: "幸運体質" },
+    { name: "マチカネタンホイザ　通常", condition: "注目株" },
+    { name: "マチカネタンホイザ　チア", condition: "練習上手" },
+    { name: "マチカネフクキタル　通常", condition: "愛嬌" },
+    { name: "マチカネフクキタル　フルアーマー", condition: "注目株" },
+    { name: "マヤノトップガン　通常", condition: "切れ者、愛嬌" },
+    { name: "マヤノトップガン　嫁", condition: "切れ者、練習上手" },
+    { name: "マヤノトップガン　猫", condition: "切れ者、注目株" },
+    { name: "マルゼンスキー　通常", condition: "切れ者" },
+    { name: "マルゼンスキー　水着", condition: "愛嬌" },
+    { name: "マルゼンスキー　正月", condition: "ポジティブ思考" },
+    { name: "マンハッタンカフェ　通常", condition: "愛嬌" },
+    { name: "マンハッタンカフェ　バレンタイン", condition: "練習上手" },
+    { name: "マンハッタンカフェ　嫁", condition: "切れ者" },
+    { name: "ミスターシービー　通常", condition: "愛嬌" },
+    { name: "ミスターシービー　正月", condition: "ポジティブ思考" },
+    { name: "ミホノブルボン　通常", condition: "注目株" },
+    { name: "ミホノブルボン　バレンタイン", condition: "愛嬌" },
+    { name: "メイショウドトウ　通常", condition: "練習上手" },
+    { name: "メイショウドトウ　ハロウィン", condition: "愛嬌" },
+    { name: "メジロアルダン　通常", condition: "切れ者、愛嬌" },
+    { name: "メジロアルダン　ダンス", condition: "愛嬌、注目株" },
+    { name: "メジロドーベル　通常", condition: "愛嬌" },
+    { name: "メジロドーベル　夏", condition: "注目株" },
+    { name: "メジロパーマー　通常", condition: "愛嬌" },
+    { name: "メジロパーマー　クリスマス", condition: "練習上手" },
+    { name: "メジロブライト　通常", condition: "愛嬌" },
+    { name: "メジロブライト　クリスマス", condition: "切れ者" },
+    { name: "メジロブライト　水着", condition: "ポジティブ思考" },
+    { name: "メジロマックイーン　通常", condition: "練習上手" },
+    { name: "メジロマックイーン　アニメ", condition: "注目株" },
+    { name: "メジロマックイーン　水着", condition: "愛嬌" },
+    { name: "メジロライアン　通常", condition: "注目株" },
+    { name: "メジロライアン　バレンタイン", condition: "愛嬌" },
+    { name: "メジロラモーヌ　通常", condition: "切れ者、注目株" },
+    { name: "メジロラモーヌ　嫁", condition: "切れ者、リフレッシュの心得" },
+    { name: "ヤエノムテキ　通常", condition: "愛嬌" },
+    { name: "ヤエノムテキ　侍", condition: "練習上手" },
+    { name: "ヤマニンゼファー　通常", condition: "愛嬌" },
+    { name: "ヤマニンゼファー　バレンタイン", condition: "リフレッシュの心得" },
+    { name: "ユキノビジン　通常", condition: "練習上手" },
+    { name: "ユキノビジン　バレンタイン", condition: "愛嬌" },
+    { name: "ユキノビジン　駿大祭", condition: "リフレッシュの心得" },
+    { name: "ライスシャワー　通常", condition: "愛嬌" },
+    { name: "ライスシャワー　ハロウィン", condition: "練習上手" },
+    { name: "ライスシャワー　豊食祭", condition: "注目株" },
+    { name: "ラインクラフト　通常", condition: "切れ者" },
+    { name: "ラインクラフト　配布", condition: "切れ者、ポジティブ思考" },
+    { name: "ラヴズオンリーユー　通常", condition: "切れ者" },
+    { name: "ラヴズオンリーユー　BC", condition: "愛嬌" },
+    { name: "ラッキーライラック", condition: "練習上手" },
+    { name: "ルーラーシップ", condition: "愛嬌、ポジティブ思考" },
+    { name: "レッドディザイア", condition: "幸運体質" },
+    { name: "ロイスアンドロイス", condition: "注目株" },
+    { name: "ローズキングダム", condition: "注目株" },
+    { name: "ワンダーアキュート　通常", condition: "愛嬌" },
+    { name: "ワンダーアキュート　温泉", condition: "注目株" }
+  ];
+
+  const searchInput = document.getElementById("searchInput");
+  const clearBtn = document.getElementById("clearBtn");
+  const searchResult = document.getElementById("searchResult");
+  const resultCount = document.getElementById("resultCount");
+  const allData = document.getElementById("allData");
+  const allTitle = document.getElementById("allTitle");
+
+  // 全角スペースを半角スペースに統一して小文字化する関数
+  function normalize(str) {
+    return str.replace(/　/g, " ").toLowerCase();
+  }
+
+  // 全一覧を描画
+  allTitle.textContent = `📋 全一覧（全${characterData.length}件）`;
+  allData.innerHTML = characterData.map(item => `
+    <tr>
+      <td>${item.name}</td>
+      <td>${item.condition}</td>
+    </tr>
+  `).join("");
+
+  // 検索実行処理
+  function doSearch() {
+    const rawKeyword = searchInput.value.trim();
+    if (rawKeyword === "") {
+      resultCount.textContent = "文字を入力すると検索結果が表示されます";
+      searchResult.innerHTML = `<tr><td colspan="2" class="empty-msg">検索キーワードを入力してください</td></tr>`;
+      return;
+    }
+
+    // スペース区切りでAND検索にも対応
+    const keywords = normalize(rawKeyword).split(/\s+/);
+    const filtered = characterData.filter(item => {
+      const targetText = normalize(item.name + " " + item.condition);
+      return keywords.every(kw => targetText.includes(kw));
+    });
+
+    resultCount.textContent = `検索結果：${filtered.length}件`;
+    if (filtered.length === 0) {
+      searchResult.innerHTML = `<tr><td colspan="2" class="empty-msg">一致するデータが見つかりませんでした</td></tr>`;
+    } else {
+      searchResult.innerHTML = filtered.map(item => `
+        <tr>
+          <td>${item.name}</td>
+          <td>${item.condition}</td>
+        </tr>
+      `).join("");
+    }
+  }
+
+  searchInput.addEventListener("input", doSearch);
+  clearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    doSearch();
+    searchInput.focus();
+  });
+</script>
+
+</body>
+</html>
